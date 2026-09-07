@@ -1,1 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SVA Master Trainer</title>
+<style>
+  :root {
+    --bg:#f5f7fb; --card:#ffffff; --text:#1f2937; --muted:#6b7280;
+    --good:#15803d; --bad:#b91c1c; --accent:#2563eb; --line:#dbe3ee; --warn:#a16207;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+  .app{max-width:980px;margin:auto;padding:18px}
+  h1{margin:0;font-size:clamp(25px,4vw,38px)}
+  .sub{color:var(--muted);margin:6px 0 16px}
+  .memory{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-bottom:14px}
+  .pill{background:#eef4ff;border:1px solid #cfe0ff;border-radius:14px;padding:12px;font-weight:700}
+  .toolbar,.scorebar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin:10px 0}
+  select,button{font:inherit;border-radius:10px;border:1px solid var(--line);padding:10px 12px;background:white}
+  button{cursor:pointer;font-weight:700}
+  button.primary{background:var(--accent);color:white;border-color:var(--accent)}
+  button.danger{color:var(--bad)}
+  .stat{background:white;border:1px solid var(--line);padding:9px 12px;border-radius:12px;font-size:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 8px 30px rgba(31,41,55,.05)}
+  .meta{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:14px;flex-wrap:wrap}
+  .question{font-size:clamp(22px,3.5vw,31px);line-height:1.42;margin:18px 0}
+  .blank{display:inline-block;min-width:90px;border-bottom:3px solid #334155;text-align:center}
+  .options{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:11px}
+  .option{padding:14px;border:2px solid var(--line);border-radius:13px;background:white;text-align:left;font-size:18px}
+  .option:hover{border-color:#9bb7ed}
+  .option.correct{border-color:var(--good);background:#ecfdf3;color:#14532d}
+  .option.wrong{border-color:var(--bad);background:#fff1f2;color:#7f1d1d}
+  .option:disabled{cursor:default}
+  .feedback{margin-top:17px;padding:14px;border-radius:13px;display:none;line-height:1.45}
+  .feedback.good{display:block;background:#ecfdf3;border:1px solid #bbf7d0}
+  .feedback.bad{display:block;background:#fff1f2;border:1px solid #fecdd3}
+  .rule{font-weight:700;margin-top:5px}
+  .footerBtns{display:flex;justify-content:space-between;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .progress{height:10px;border-radius:999px;background:#e5e7eb;overflow:hidden;margin-top:13px}
+  .progress>div{height:100%;background:var(--accent);width:0%}
+  .record{margin-top:18px;background:white;border:1px solid var(--line);border-radius:16px;padding:16px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:9px;border-bottom:1px solid #edf0f5;text-align:left}
+  th{background:#f8fafc}
+  .tag{display:inline-block;padding:3px 8px;border-radius:999px;background:#f1f5f9;font-size:12px}
+  .small{font-size:13px;color:var(--muted)}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>SVA Master Trainer</h1>
+  <div class="sub">Subject–Verb Agreement MCQ • exhaustive practice set • progress saved on this device</div>
 
+  <div class="memory">
+    <div class="pill">1️⃣ <b>One-S trick</b><br><span class="small">Singular subject → ordinary present-tense verb gets <b>s</b>. Plural subject → verb usually has no <b>s</b>.</span></div>
+    <div class="pill">2️⃣ <b>AND → plural</b><br><span class="small">A and B / both A and B → plural verb.</span></div>
+    <div class="pill">3️⃣ <b>NNNN</b><br><span class="small">Neither Nor → Nearest Noun. Same idea for either…or / not only…but also.</span></div>
+    <div class="pill">4️⃣ <b>Extra phrase → first subject</b><br><span class="small">as well as / together with / along with / with → agree with the first subject.</span></div>
+  </div>
+
+  <div class="toolbar">
+    <label>Practice:
+      <select id="categoryFilter"></select>
+    </label>
+    <label>Mode:
+      <select id="modeFilter">
+        <option value="all">All questions</option>
+        <option value="wrong">Wrong before</option>
+        <option value="unseen">Unseen only</option>
+      </select>
+    </label>
+    <button id="shuffleBtn">Shuffle</button>
+    <button id="resetSessionBtn">Restart session</button>
+  </div>
+
+  <div class="scorebar">
+    <div class="stat">Session: <b id="sessionScore">0/0</b></div>
+    <div class="stat">Accuracy: <b id="sessionAccuracy">—</b></div>
+    <div class="stat">Best streak: <b id="bestStreak">0</b></div>
+    <div class="stat">Lifetime attempts: <b id="lifetimeAttempts">0</b></div>
+    <div class="stat">Lifetime accuracy: <b id="lifetimeAccuracy">—</b></div>
+  </div>
+
+  <div class="card">
+    <div class="meta">
+      <span id="categoryLabel" class="tag"></span>
+      <span id="qCounter"></span>
+    </div>
+    <div class="progress"><div id="progressFill"></div></div>
+    <div class="question" id="questionText"></div>
+    <div class="options" id="options"></div>
+    <div class="feedback" id="feedback"></div>
+    <div class="footerBtns">
+      <button id="prevBtn">◀ Previous</button>
+      <button id="nextBtn" class="primary">Next ▶</button>
+    </div>
+  </div>
+
+  <div class="record">
+    <h2 style="margin-top:0">Score record</h2>
+    <div class="small">Saved automatically in this browser using localStorage.</div>
+    <div style="overflow:auto;margin-top:10px">
+      <table>
+        <thead><tr><th>Category</th><th>Attempted</th><th>Correct</th><th>Accuracy</th></tr></thead>
+        <tbody id="recordBody"></tbody>
+      </table>
+    </div>
+    <div class="footerBtns">
+      <button id="exportBtn">Export score record</button>
+      <button id="resetAllBtn" class="danger">Reset all saved scores</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const C = {
+  SIMPLE:'Simple singular / plural',
+  BOTH:'A and B / both…and',
+  NEITHER:'Neither…nor',
+  EITHER:'Either…or',
+  NOTONLY:'Not only…but also / not…but',
+  EXTRA:'As well as / together with / extra phrase',
+  INDEFINITE:'Each / every / indefinite pronouns',
+  ONEOF:'One of / each of / neither of',
+  NUMBER:'A number of / the number of',
+  THERE:'There is / There are',
+  AMOUNT:'Time / money / distance / measurement',
+  SINGULAR_S:'Looks plural but singular',
+  UNCOUNT:'Uncountable nouns',
+  PLURAL_ONLY:'Plural-only nouns / pair of',
+  COLLECTIVE:'Collective nouns',
+  RELATIVE:'Who / that / which clauses',
+  NONE:'None of',
+  QUANTITY:'All / some / most / half / percentage'
+};
+
+const Q=[];
+let id=1;
+function add(cat, sentence, correct, wrongs, rule, note=''){
+  const opts=[correct,...wrongs].filter((x,i,a)=>a.indexOf(x)===i);
+  Q.push({id:id++,cat,sentence,correct,options:opts,rule,note});
+}
+
+// 1. Simple singular / plural — ordinary verbs, be, have
+[
+ ['The boy ___ to school every day.','walks',['walk','walking','walked']],
+ ['The boys ___ to school every day.','walk',['walks','walking','walked']],
+ ['The dog ___ loudly at night.','barks',['bark','barking','barked']],
+ ['The dogs ___ loudly at night.','bark',['barks','barking','barked']],
+ ['My sister ___ piano lessons on Fridays.','has',['have','having','had']],
+ ['My sisters ___ piano lessons on Fridays.','have',['has','having','had']],
+ ['The child ___ ready.','is',['are','be','were']],
+ ['The children ___ ready.','are',['is','be','was']],
+ ['This pupil ___ hard for every test.','studies',['study','studying','studied']],
+ ['These pupils ___ hard for every test.','study',['studies','studying','studied']],
+ ['A bird ___ above the trees.','flies',['fly','flying','flied']],
+ ['Birds ___ above the trees.','fly',['flies','flying','flied']]
+].forEach(x=>add(C.SIMPLE,...x,'Singular subject → singular verb; plural subject → plural verb.'));
+
+// 2. AND / both
+[
+ ['Tom and Jerry ___ good friends.','are',['is','was','be']],
+ ['Ali and Ben ___ football every Saturday.','play',['plays','playing','played']],
+ ['Both the teacher and the pupil ___ arrived.','have',['has','having','had']],
+ ['Both Sarah and Jane ___ hardworking.','are',['is','was','be']],
+ ['Both my brother and my sister ___ the piano.','play',['plays','playing','played']],
+ ['The principal and the teachers ___ attending the ceremony.','are',['is','was','be']],
+ ['Both the cat and the dog ___ hungry.','are',['is','was','be']],
+ ['My mother and father ___ dinner together.','cook',['cooks','cooking','cooked']]
+].forEach(x=>add(C.BOTH,...x,'A and B / both A and B → plural verb.'));
+
+// 3. Neither nor — nearest noun
+[
+ ['Neither the boys nor John ___ football after school.','plays',['play','playing','played']],
+ ['Neither John nor the boys ___ football after school.','play',['plays','playing','played']],
+ ['Neither the teachers nor the principal ___ attending.','is',['are','were','be']],
+ ['Neither the principal nor the teachers ___ attending.','are',['is','was','be']],
+ ['Neither my sisters nor my mother ___ a car.','drives',['drive','driving','drove']],
+ ['Neither my mother nor my sisters ___ a car.','drive',['drives','driving','drove']],
+ ['Neither the puppies nor the dog ___ hungry.','is',['are','were','be']],
+ ['Neither the dog nor the puppies ___ hungry.','are',['is','was','be']],
+ ['Neither the players nor the coach ___ the answer.','knows',['know','knowing','knew']],
+ ['Neither the coach nor the players ___ the answer.','know',['knows','knowing','knew']]
+].forEach(x=>add(C.NEITHER,...x,'NNNN: Neither Nor → Nearest Noun. The verb agrees with the subject nearest to it.'));
+
+// 4. Either or
+[
+ ['Either the boys or John ___ coming.','is',['are','were','be']],
+ ['Either John or the boys ___ coming.','are',['is','was','be']],
+ ['Either my brothers or my mother ___ me to school.','drives',['drive','driving','drove']],
+ ['Either my mother or my brothers ___ me to school.','drive',['drives','driving','drove']],
+ ['Either the teachers or the principal ___ the key.','has',['have','having','had']],
+ ['Either the principal or the teachers ___ the key.','have',['has','having','had']],
+ ['Either Sarah or her friends ___ the decorations.','prepare',['prepares','preparing','prepared']],
+ ['Either her friends or Sarah ___ the decorations.','prepares',['prepare','preparing','prepared']]
+].forEach(x=>add(C.EITHER,...x,'Either…or → the verb agrees with the nearest subject.'));
+
+// 5. Not only…but also / not…but
+[
+ ['Not only John but also his friends ___ attending.','are',['is','was','be']],
+ ['Not only his friends but also John ___ attending.','is',['are','were','be']],
+ ['Not only the pupils but also the teacher ___ excited.','is',['are','were','be']],
+ ['Not only the teacher but also the pupils ___ excited.','are',['is','was','be']],
+ ['Not the teachers but the principal ___ responsible.','is',['are','were','be']],
+ ['Not the principal but the teachers ___ responsible.','are',['is','was','be']],
+ ['Not only my parents but also my brother ___ the plan.','supports',['support','supporting','supported']],
+ ['Not only my brother but also my parents ___ the plan.','support',['supports','supporting','supported']]
+].forEach(x=>add(C.NOTONLY,...x,'Not only…but also / not…but → agree with the nearest subject.'));
+
+// 6. Extra phrase — first subject
+const extraItems = [
+ ['John, as well as his brothers, ___ swimming.','likes',['like','liking','liked'],'as well as'],
+ ['John’s brothers, as well as John, ___ swimming.','like',['likes','liking','liked'],'as well as'],
+ ['The boy, together with his friends, ___ football.','plays',['play','playing','played'],'together with'],
+ ['The boys, together with their friend, ___ football.','play',['plays','playing','played'],'together with'],
+ ['The principal, along with the teachers, ___ arrived.','has',['have','having','had'],'along with'],
+ ['The teachers, along with the principal, ___ arrived.','have',['has','having','had'],'along with'],
+ ['Mary, with her cousins, ___ visiting us.','is',['are','were','be'],'with'],
+ ['The cousins, with Mary, ___ visiting us.','are',['is','was','be'],'with'],
+ ['The captain, accompanied by his teammates, ___ into the hall.','walks',['walk','walking','walked'],'accompanied by'],
+ ['The players, accompanied by their coach, ___ into the hall.','walk',['walks','walking','walked'],'accompanied by'],
+ ['Ali, in addition to his brothers, ___ chess.','plays',['play','playing','played'],'in addition to'],
+ ['The brothers, in addition to Ali, ___ chess.','play',['plays','playing','played'],'in addition to'],
+ ['My sister, besides my parents, ___ coming.','is',['are','were','be'],'besides'],
+ ['My parents, besides my sister, ___ coming.','are',['is','was','be'],'besides'],
+ ['The class, including the monitor, ___ ready.','is',['are','were','be'],'including'],
+ ['The pupils, including the monitor, ___ ready.','are',['is','was','be'],'including'],
+ ['The teacher, plus two parent volunteers, ___ helping us.','is',['are','were','be'],'plus'],
+ ['The volunteers, plus the teacher, ___ helping us.','are',['is','was','be'],'plus']
+];
+extraItems.forEach(x=>add(C.EXTRA,x[0],x[1],x[2],`“${x[3]}” adds extra information. Ignore that phrase and make the verb agree with the FIRST subject.`));
+
+// 7. Each / every / indefinite pronouns
+[
+ ['Each pupil ___ a worksheet.','has',['have','having','had']],
+ ['Every pupil ___ a worksheet.','has',['have','having','had']],
+ ['Everyone ___ ready.','is',['are','were','be']],
+ ['Everybody ___ a turn.','gets',['get','getting','got']],
+ ['Everything ___ in its proper place.','is',['are','were','be']],
+ ['Someone ___ at the door.','is',['are','were','be']],
+ ['Somebody ___ my pencil.','has',['have','having','had']],
+ ['Something ___ strange.','looks',['look','looking','looked']],
+ ['Anyone ___ welcome to join.','is',['are','were','be']],
+ ['Anybody ___ allowed to answer.','is',['are','were','be']],
+ ['Anything ___ possible with practice.','is',['are','were','be']],
+ ['No one ___ the answer.','knows',['know','knowing','knew']],
+ ['Nobody ___ late today.','is',['are','were','be']],
+ ['Nothing ___ forever.','lasts',['last','lasting','lasted']],
+ ['Either ___ acceptable.','is',['are','were','be']],
+ ['Neither ___ correct.','is',['are','were','be']],
+ ['One ___ enough.','is',['are','were','be']],
+ ['Each boy and each girl ___ given a badge.','is',['are','were','be']],
+ ['Every teacher and every pupil ___ a role.','has',['have','having','had']]
+].forEach(x=>add(C.INDEFINITE,...x,'Each, every, everyone, everybody, someone, anyone, no one, either, neither and one are treated as singular in these structures.'));
+
+// 8. One of / each of / neither of
+[
+ ['One of the boys ___ absent.','is',['are','were','be']],
+ ['One of the girls ___ won the prize.','has',['have','having','had']],
+ ['Each of the players ___ a water bottle.','has',['have','having','had']],
+ ['Each of the books ___ a label.','has',['have','having','had']],
+ ['Neither of the answers ___ correct.','is',['are','were','be']],
+ ['Neither of the boys ___ ready.','is',['are','were','be']],
+ ['Either of the routes ___ suitable.','is',['are','were','be']],
+ ['One of my friends ___ nearby.','lives',['live','living','lived']]
+].forEach(x=>add(C.ONEOF,...x,'The head word is one / each / either / neither, so use a singular verb.'));
+
+// 9. A number / the number
+[
+ ['A number of pupils ___ absent today.','are',['is','was','be']],
+ ['A number of books ___ missing.','are',['is','was','be']],
+ ['A number of parents ___ volunteered.','have',['has','having','had']],
+ ['The number of absent pupils ___ increasing.','is',['are','were','be']],
+ ['The number of books in the library ___ large.','is',['are','were','be']],
+ ['The number of participants ___ risen.','has',['have','having','had']]
+].forEach(x=>add(C.NUMBER,...x,'A number of = several → plural. The number of = one total number → singular.'));
+
+// 10. There is / are
+[
+ ['There ___ a book on the table.','is',['are','were','be']],
+ ['There ___ three books on the table.','are',['is','was','be']],
+ ['There ___ a pencil in the box.','is',['are','were','be']],
+ ['There ___ many pencils in the box.','are',['is','was','be']],
+ ['There ___ a book and two pencils on the table.','is',['are','were','be']],
+ ['There ___ two pencils and a book on the table.','are',['is','was','be']]
+].forEach(x=>add(C.THERE,...x,'With there is/are, agreement normally follows the noun or noun phrase immediately after the verb.'));
+
+// 11. Amounts, time, distance, measurements
+[
+ ['Ten dollars ___ enough for lunch.','is',['are','were','be']],
+ ['Five kilometres ___ a long distance to walk.','is',['are','were','be']],
+ ['Three hours ___ enough time.','is',['are','were','be']],
+ ['Twenty kilograms ___ too heavy for me to lift.','is',['are','were','be']],
+ ['Two litres of water ___ enough for the trip.','is',['are','were','be']],
+ ['Ten years ___ a long time to wait.','is',['are','were','be']],
+ ['Ten-dollar notes ___ on the table.','are',['is','was','be']],
+ ['Two one-kilogram bags ___ on the floor.','are',['is','was','be']]
+].forEach(x=>add(C.AMOUNT,...x,'A total amount of money, time, distance or measurement is often treated as one unit → singular. Individual items remain plural.'));
+
+// 12. Looks plural but singular
+[
+ ['Mathematics ___ my favourite subject.','is',['are','were','be']],
+ ['The news ___ spreading quickly.','is',['are','were','be']],
+ ['Physics ___ interesting.','is',['are','were','be']],
+ ['Economics ___ taught at the college.','is',['are','were','be']],
+ ['Measles ___ an infectious disease.','is',['are','were','be']]
+].forEach(x=>add(C.SINGULAR_S,...x,'Some nouns end in -s but are grammatically singular.'));
+
+// 13. Uncountable nouns
+[
+ ['The information ___ useful.','is',['are','were','be']],
+ ['Her advice ___ helpful.','is',['are','were','be']],
+ ['The furniture ___ expensive.','is',['are','were','be']],
+ ['The equipment ___ ready for use.','is',['are','were','be']],
+ ['My luggage ___ heavy.','is',['are','were','be']],
+ ['The homework ___ difficult.','is',['are','were','be']],
+ ['The traffic ___ heavy this morning.','is',['are','were','be']],
+ ['The water ___ cold.','is',['are','were','be']]
+].forEach(x=>add(C.UNCOUNT,...x,'Uncountable nouns normally take singular verbs.'));
+
+// 14. Plural-only nouns / pair
+[
+ ['The scissors ___ on the table.','are',['is','was','be']],
+ ['My trousers ___ too long.','are',['is','was','be']],
+ ['These shorts ___ new.','are',['is','was','be']],
+ ['His spectacles ___ broken.','are',['is','was','be']],
+ ['The clothes ___ wet.','are',['is','was','be']],
+ ['A pair of scissors ___ on the table.','is',['are','were','be']],
+ ['Two pairs of scissors ___ on the table.','are',['is','was','be']],
+ ['A pair of trousers ___ hanging there.','is',['are','were','be']]
+].forEach(x=>add(C.PLURAL_ONLY,...x,'Scissors/trousers/shorts/spectacles/clothes are plural. “A pair of …” is singular; “two pairs of …” is plural.'));
+
+// 15. Collective nouns (school convention)
+[
+ ['The team ___ playing well.','is',['are','were','be']],
+ ['The class ___ going on an excursion.','is',['are','were','be']],
+ ['The family ___ moving house.','is',['are','were','be']],
+ ['The committee ___ meeting today.','is',['are','were','be']],
+ ['The audience ___ waiting quietly.','is',['are','were','be']]
+].forEach(x=>add(C.COLLECTIVE,...x,'When a collective noun is treated as one group/unit, use a singular verb.'));
+
+// 16. Relative clauses
+[
+ ['She is one of the pupils who ___ taking part.','are',['is','was','be']],
+ ['She is the only one who ___ taking part.','is',['are','were','be']],
+ ['These are the books that ___ missing.','are',['is','was','be']],
+ ['This is the book that ___ missing.','is',['are','were','be']],
+ ['He is one of the boys who ___ chess well.','play',['plays','playing','played']],
+ ['He is the only boy who ___ chess well.','plays',['play','playing','played']]
+].forEach(x=>add(C.RELATIVE,...x,'The verb in the relative clause agrees with the noun that who/that/which refers to.'));
+
+// 17. None
+[
+ ['None of the water ___ left.','is',['are','were','be']],
+ ['None of the food ___ ready.','is',['are','were','be']],
+ ['None of the pupils ___ ready.','are',['is','was','be']],
+ ['None of the books ___ damaged.','are',['is','was','be']],
+ ['None of the milk ___ fresh.','is',['are','were','be']]
+].forEach(x=>add(C.NONE,...x,'With none of, use singular for an uncountable/singular idea; plural is natural with plural countable nouns.'));
+
+// 18. Some / all / most / half / percentage
+[
+ ['Some of the water ___ dirty.','is',['are','were','be']],
+ ['Some of the pupils ___ absent.','are',['is','was','be']],
+ ['Half of the cake ___ gone.','is',['are','were','be']],
+ ['Half of the apples ___ rotten.','are',['is','was','be']],
+ ['Most of the food ___ been eaten.','has',['have','having','had']],
+ ['Most of the children ___ arrived.','have',['has','having','had']],
+ ['All of the milk ___ spilled.','has',['have','having','had']],
+ ['All of the bottles ___ fallen.','have',['has','having','had']],
+ ['Fifty per cent of the water ___ gone.','is',['are','were','be']],
+ ['Fifty per cent of the pupils ___ absent.','are',['is','was','be']],
+ ['Part of the wall ___ damaged.','is',['are','were','be']],
+ ['Part of the windows ___ broken.','are',['is','was','be']]
+].forEach(x=>add(C.QUANTITY,...x,'With some/all/most/half/part/percentage of…, look at the noun after “of”.'));
+
+// State
+const STORAGE='svaMasterTrainer_v1';
+const UI_STORAGE='svaMasterTrainer_ui_v1';
+let saved=JSON.parse(localStorage.getItem(STORAGE)||'{}');
+if(!saved.questions) saved.questions={};
+if(!saved.stats) saved.stats={attempts:0,correct:0,bestStreak:0};
+let session={correct:0,attempts:0,streak:0};
+let uiSaved=JSON.parse(localStorage.getItem(UI_STORAGE)||'{}');
+let filtered=[]; let index=0; let answered=false;
+
+const el=id=>document.getElementById(id);
+const categoryFilter=el('categoryFilter');
+const modeFilter=el('modeFilter');
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function initFilters(){
+  categoryFilter.innerHTML='<option value="all">All categories ('+Q.length+')</option>';
+  Object.values(C).forEach(cat=>{
+    const count=Q.filter(q=>q.cat===cat).length;
+    categoryFilter.innerHTML += `<option value="${cat}">${cat} (${count})</option>`;
+  });
+}
+
+function getFiltered(){
+  const cat=categoryFilter.value, mode=modeFilter.value;
+  return Q.filter(q=>{
+    if(cat!=='all' && q.cat!==cat) return false;
+    const r=saved.questions[q.id];
+    if(mode==='wrong' && !(r && r.wrong>0)) return false;
+    if(mode==='unseen' && r) return false;
+    return true;
+  });
+}
+
+function saveUI(){
+  localStorage.setItem(UI_STORAGE,JSON.stringify({
+    category:categoryFilter.value, mode:modeFilter.value, index:index
+  }));
+}
+
+function applyFilters(doShuffle=false){
+  filtered=getFiltered();
+  if(doShuffle) shuffle(filtered);
+  index=0; answered=false; saveUI(); render();
+}
+
+function render(){
+  const opts=el('options'), fb=el('feedback');
+  opts.innerHTML=''; fb.className='feedback'; fb.innerHTML=''; answered=false;
+  if(filtered.length===0){
+    el('categoryLabel').textContent='No questions';
+    el('qCounter').textContent=''; el('progressFill').style.width='0%';
+    el('questionText').innerHTML='No questions match this filter yet.';
+    return;
+  }
+  const q=filtered[index];
+  el('categoryLabel').textContent=q.cat;
+  el('qCounter').textContent=`Question ${index+1} of ${filtered.length}`;
+  el('progressFill').style.width=((index+1)/filtered.length*100)+'%';
+  el('questionText').innerHTML=q.sentence.replace('___','<span class="blank">?</span>');
+  const options=shuffle([...q.options]);
+  options.forEach(op=>{
+    const b=document.createElement('button'); b.className='option'; b.textContent=op;
+    b.onclick=()=>answer(q,op,b); opts.appendChild(b);
+  });
+  el('prevBtn').disabled=index===0;
+  el('nextBtn').textContent=index===filtered.length-1?'Finish / Review ▶':'Next ▶';
+  updateStats();
+  saveUI();
+}
+
+function answer(q,op,button){
+  if(answered) return; answered=true;
+  const buttons=[...document.querySelectorAll('.option')];
+  buttons.forEach(b=>{b.disabled=true;if(b.textContent===q.correct)b.classList.add('correct');});
+  const ok=op===q.correct;
+  if(!ok) button.classList.add('wrong');
+  session.attempts++; saved.stats.attempts++;
+  if(!saved.questions[q.id]) saved.questions[q.id]={attempts:0,correct:0,wrong:0};
+  const r=saved.questions[q.id]; r.attempts++;
+  if(ok){session.correct++;session.streak++;saved.stats.correct++;r.correct++;}
+  else {session.streak=0;r.wrong++;}
+  if(session.streak>saved.stats.bestStreak)saved.stats.bestStreak=session.streak;
+  localStorage.setItem(STORAGE,JSON.stringify(saved));
+  const fb=el('feedback'); fb.className='feedback '+(ok?'good':'bad');
+  fb.innerHTML=`<b>${ok?'✅ Correct!':'❌ Not quite.'}</b> Correct answer: <b>${q.correct}</b><div class="rule">Rule: ${q.rule}</div>${q.note?'<div>'+q.note+'</div>':''}`;
+  updateStats(); updateRecord();
+}
+
+function updateStats(){
+  el('sessionScore').textContent=`${session.correct}/${session.attempts}`;
+  el('sessionAccuracy').textContent=session.attempts?Math.round(session.correct/session.attempts*100)+'%':'—';
+  el('bestStreak').textContent=saved.stats.bestStreak||0;
+  el('lifetimeAttempts').textContent=saved.stats.attempts||0;
+  el('lifetimeAccuracy').textContent=saved.stats.attempts?Math.round(saved.stats.correct/saved.stats.attempts*100)+'%':'—';
+}
+
+function updateRecord(){
+  const body=el('recordBody'); body.innerHTML='';
+  Object.values(C).forEach(cat=>{
+    const qs=Q.filter(q=>q.cat===cat); let a=0,c=0;
+    qs.forEach(q=>{const r=saved.questions[q.id];if(r){a+=r.attempts;c+=r.correct;}});
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${cat}</td><td>${a}</td><td>${c}</td><td>${a?Math.round(c/a*100)+'%':'—'}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+el('nextBtn').onclick=()=>{if(filtered.length===0)return;if(index<filtered.length-1){index++;render();}else{index=0;render();}saveUI();};
+el('prevBtn').onclick=()=>{if(index>0){index--;render();saveUI();}};
+el('shuffleBtn').onclick=()=>{filtered=shuffle(getFiltered());index=0;saveUI();render();};
+el('resetSessionBtn').onclick=()=>{session={correct:0,attempts:0,streak:0};applyFilters(false);updateStats();};
+categoryFilter.onchange=()=>applyFilters(false);
+modeFilter.onchange=()=>applyFilters(false);
+el('resetAllBtn').onclick=()=>{if(confirm('Reset ALL saved scores and question history?')){localStorage.removeItem(STORAGE);localStorage.removeItem(UI_STORAGE);saved={questions:{},stats:{attempts:0,correct:0,bestStreak:0}};uiSaved={};session={correct:0,attempts:0,streak:0};applyFilters(false);updateRecord();}};
+el('exportBtn').onclick=()=>{
+  const data={exportedAt:new Date().toISOString(),totalQuestions:Q.length,stats:saved.stats,questionHistory:saved.questions};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sva-score-record.json';a.click();URL.revokeObjectURL(a.href);
+};
+
+initFilters();
+if(uiSaved.category && [...categoryFilter.options].some(o=>o.value===uiSaved.category)) categoryFilter.value=uiSaved.category;
+if(uiSaved.mode && [...modeFilter.options].some(o=>o.value===uiSaved.mode)) modeFilter.value=uiSaved.mode;
+filtered=getFiltered();
+if(!filtered.length){ categoryFilter.value='all'; modeFilter.value='all'; filtered=[...Q]; }
+shuffle(filtered);
+index=Math.min(Number.isInteger(uiSaved.index)?uiSaved.index:0,Math.max(filtered.length-1,0));
+render();updateRecord();
+</script>
+</body>
+</html>
